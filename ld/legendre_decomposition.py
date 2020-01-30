@@ -12,8 +12,41 @@ from scipy import linalg
 
 #class LegendreDecomposition(TransformerMixin, BaseEstimator):
 class LegendreDecomposition:
+    """Legendre Decomposition
+
+    Find non-negative decomposable tensor Q whose multiplicative
+    combination of parameters approximates the non-
+    negative input tensor P, solving as a convex optimization
+    problem thanks to information geometric formulation.
+
+    Parameters
+    ----------
+    solver : 'ng' | 'gd'
+        Type of solver.
+
+        - 'ng': natural gradient method.
+        - 'gd': gradient descent method.
+
+    Attributes
+    ----------
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> P = np.random.rand(8, 5, 3)
+    >>> from ld import LegendreDecomposition
+    >>> ld = LegendreDecomposition(solver='ng', max_iter=5)
+    >>> Q = ld.fit_transform(P)
+
+    References
+    ----------
+    Sugiyama, M., Nakahara, H., Tsuda, K.
+    "Legendre Decomposition for Tensors".
+    Advances in Neural Information Processing Systems 31(NeurIPS2018),
+    pages 8825-8835, 2018.
+    https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors
     """
-    """
+
     def __init__(self, core_size=2, depth_size=4, solver='ng',
                  tol=1e-4, max_iter=5, learning_rate=0.001,
                  random_state=None, verbose=0, shuffle=False):
@@ -27,114 +60,66 @@ class LegendreDecomposition:
         self.verbose = verbose
         self.shuffle = shuffle
 
-    def fit_transform(self, X, y=None):
-        self.theta = self._legendre_decomposition(X)
-        Q = self._reconstruct(self.theta) * X.sum()
-        self.reconstruction_err_ = self._calc_rmse(X, Q)
+    def fit_transform(self, P, y=None):
+        r"""Learn a Legendre Decomposition model for the data P and
+        returns the transformed data.
+        This is more efficient than calling fit followed by transform.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        y : Ignored
+
+        Returns
+        -------
+        Q : array
+            second/third-order tensor.
+            Transformed data reconstructed by parameter \theta.
+        """
+        self.theta = self._legendre_decomposition(P)
+        Q = self._reconstruct(self.theta) * P.sum()
+        self.reconstruction_err_ = self._calc_rmse(P, Q)
 
         return Q
 
-    def fit(self, X, y=None, **params):
-        """Learn a NMF model for the data X.
+    def fit(self, P, y=None, **params):
+        """Learn a Legendre Decomposition model for the data.
+
         Parameters
         ----------
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Data matrix to be decomposed
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
         y : Ignored
+
         Returns
         -------
         self
         """
-        self.fit_transform(X, **params)
+        self.fit_transform(P, **params)
+
         return self
 
     def transform(self):
-        """Transform the data X according to the fitted NMF model
+        r"""Transform the data P according to the fitted Legendre Decomposition model.
+
         Parameters
         ----------
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            Data matrix to be transformed by the model
+        None
+
         Returns
         -------
-        W : array, shape (n_samples, n_components)
-            Transformed data
+        Q : array
+            second/third-order tensor.
+            Transformed data reconstructed by parameter \theta.
         """
-        #check_is_fitted(self)
         self._check_is_fitted()
 
-        Q = self._reconstruct(self.theta)
-        return Q
-
-    def _fit_gradient_descent(self, P, beta):
-        """
-        """
-        theta = self._initialize()
-        self.eta_hat = self._compute_eta(P)
-
-        for n_iter in range(self.max_iter):
-            violation = 0.
-            for v in beta:
-                # \theta_v \gets \theta_v - \epsilon \times (\eta_v - \hat{\eta_v})
-                grad = self._compute_eta(self._reconstruct(theta)) - self.eta_hat
-                theta[v] -= self.learning_rate * grad[v]
-                #if n_iter == 0:
-                #    violation_init = violation
-                # TODO: set convergence condition.
-                #if violation / violation_init <= self.tol:
-                #    if self.verbose:
-                #        print("Converged at iteration", n_iter + 1)
-                #    break
-        return theta
-
-    def _fit_natural_gradient(self, P, beta):
-        """
-        """
-        theta = self._initialize()
-        # convert to 1d array (vector).
-        theta_vec = np.array([theta[v] for v in beta]).ravel()
-        self.eta_hat = self._compute_eta(P)
-
-        for n_iter in range(self.max_iter):
-            violation = 0.
-
-            eta = self._compute_eta(self._reconstruct(theta))
-            grad = eta - self.eta_hat
-            grad_vec = np.array([grad[v] for v in beta]).ravel()
-
-            g = self._compute_jacobian(eta, beta)
-
-            # TODO: check performance of different way to calculate inverse matrix.
-            # TODO: Algorithm 7, Information Geometric Approaches for Neural Network Algorithms
-            #theta_vec -= np.linalg.solve(g, grad_vec)
-            #theta_vec -= linalg.inv(g) * grad_vec
-            try:
-                theta_vec -= np.dot(np.linalg.inv(g), grad_vec)
-            except:
-                theta_vec -= np.dot(np.linalg.pinv(g), grad_vec)
-            # Update theta
-            for n, v in enumerate(beta):
-                theta[v] = theta_vec[n]
-            #if n_iter == 0:
-            #    violation_init = violation
-            # TODO: convergence condition.
-            #if violation / violation_init <= self.tol:
-            #    if self.verbose:
-            #        print("Converged at iteration", n_iter + 1)
-            #    break
-        return theta
-
-    # TODO: change the way of generation basis, obey the author's implementation.
-    def _make_basis(self, shape):
-        """
-        """
-        if len(shape) == 2:
-            beta = [(i,j) for i, j in itertools.product(range(shape[0]), range(shape[1]))]
-        elif len(shape) == 3:
-            # TODO: check pattern of basis in the paper.
-            beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
-        else:
-            raise NotImplementedError('Order of input tensor should be 2 or 3.')
-        return beta
+        return self._reconstruct(self.theta)
 
     def _reconstruct(self, theta, b=None):
         """
@@ -177,10 +162,11 @@ class LegendreDecomposition:
         else:
             raise NotImplementedError('Order of input tensor should be 2 or 3.')
         self.prev_eta = eta.copy()
+
         return eta
 
     def _compute_jacobian(self, eta, beta):
-        """Compute jacobian, this is what we call Fisher information matrix.
+        """Compute jacobian matrix, this is what we call Fisher information matrix.
         """
         size = len(beta)
         g = np.zeros((size, size))
@@ -191,18 +177,17 @@ class LegendreDecomposition:
         if order == 2:
             for i, j in itertools.product(range(size), range(size)):
                 g[i, j] = eta[np.max((beta[i][0], beta[j][0])), \
-                              np.max((beta[i][1], beta[j][1]))
-                             ] \
+                              np.max((beta[i][1], beta[j][1]))] \
                             - eta[beta[i]] * eta[beta[j]]
         elif order == 3:
             for i, j in itertools.product(range(size), range(size)):
                 g[i, j] = eta[np.max((beta[i][0], beta[j][0])), \
                               np.max((beta[i][1], beta[j][1])), \
-                              np.max((beta[i][2], beta[j][2]))
-                             ] \
+                              np.max((beta[i][2], beta[j][2]))] \
                             - eta[beta[i]] * eta[beta[j]]
         else:
             raise NotImplementedError('Order of input tensor should be 2 or 3.')
+
         return g
 
     def _calc_rmse(self, P, Q):
@@ -227,14 +212,116 @@ class LegendreDecomposition:
         theta = np.zeros(self.shape)
         self.prev_Q = np.zeros(self.shape)
         self.prev_eta = np.zeros(self.shape)
+
         return theta
 
-    def _init_test_tensor(self, random_state):
+    # TODO: change the way of generation basis, obey the author's implementation.
+    def _make_basis(self, shape):
         """
         """
-        np.random.seed(random_state)
-        test_tensor = np.random.rand(*self.shape)
-        return test_tensor
+        if len(shape) == 2:
+            beta = [(i,j) for i, j in itertools.product(range(shape[0]), range(shape[1]))]
+        elif len(shape) == 3:
+            beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
+        else:
+            raise NotImplementedError('Order of input tensor should be 2 or 3.')
+
+        return beta
+
+    def _fit_gradient_descent(self, P, beta):
+        r"""Compute parameter \theta using Gradient Descent-based optimization algorithms.
+
+        The objective function is KL divergence(P, Q) and is minimized with
+        Gradient Descent method.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        beta : list
+            sets of basis vectors.
+
+        Returns
+        -------
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+        """
+        theta = self._initialize()
+        self.eta_hat = self._compute_eta(P)
+
+        for n_iter in range(self.max_iter):
+            violation = 0.
+            for v in beta:
+                # \theta_v \gets \theta_v - \epsilon \times (\eta_v - \hat{\eta_v})
+                grad = self._compute_eta(self._reconstruct(theta)) - self.eta_hat
+                theta[v] -= self.learning_rate * grad[v]
+                #if n_iter == 0:
+                #    violation_init = violation
+                # TODO: set convergence condition.
+                #if violation / violation_init <= self.tol:
+                #    if self.verbose:
+                #        print("Converged at iteration", n_iter + 1)
+                #    break
+
+        return theta
+
+    def _fit_natural_gradient(self, P, beta):
+        r"""Compute parameter \theta using Natural Gradient-based optimization algorithms.
+
+        The objective function is KL divergence(P, Q) and is minimized with
+        Natural Gradient method.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        beta : list
+            sets of basis vectors.
+
+        Returns
+        -------
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+        """
+        theta = self._initialize()
+        theta_vec = np.array([theta[v] for v in beta])
+        self.eta_hat = self._compute_eta(P)
+
+        for n_iter in range(self.max_iter):
+            violation = 0.
+
+            eta = self._compute_eta(self._reconstruct(theta))
+            grad = eta - self.eta_hat
+            grad_vec = np.array([grad[v] for v in beta])
+
+            g = self._compute_jacobian(eta, beta)
+
+            # TODO: check performance of different way to calculate inverse matrix.
+            # TODO: Algorithm 7, Information Geometric Approaches for Neural Network Algorithms
+            #theta_vec -= np.linalg.solve(g, grad_vec)
+            #theta_vec -= linalg.inv(g) * grad_vec
+            try:
+                theta_vec -= np.dot(np.linalg.inv(g), grad_vec)
+            except:
+                theta_vec -= np.dot(np.linalg.pinv(g), grad_vec)
+            # Update theta
+            for n, v in enumerate(beta):
+                theta[v] = theta_vec[n]
+            #if n_iter == 0:
+            #    violation_init = violation
+            # TODO: convergence condition.
+            #if violation / violation_init <= self.tol:
+            #    if self.verbose:
+            #        print("Converged at iteration", n_iter + 1)
+            #    break
+
+        return theta
 
     def _legendre_decomposition(self, P):
         """
@@ -260,13 +347,13 @@ class LegendreDecomposition:
 def main():
     np.random.seed(2020)
     P = np.random.rand(8, 5, 3)
-    ld = LegendreDecomposition(solver='ng', max_iter=5, learning_rate=1)
+    ld = LegendreDecomposition(solver='ng', max_iter=5)
     reconst_tensor = ld.fit_transform(P)
     print('Reconstruction error(RMSE): %s' % ld.reconstruction_err_)
     np.set_printoptions(threshold=200)
-    print('============= Original Tensor =============')
+    print("\n\n============= Original Tensor =============")
     print(P)
-    print('============= Reconstructed Tensor =============')
+    print("\n\n============= Reconstructed Tensor =============")
     print(reconst_tensor)
 
 if __name__ == '__main__':
