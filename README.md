@@ -39,6 +39,6 @@ As of now, it doesn't support order of input tensor more than 4, means it suppor
 [MIT](https://github.com/Yhkwkm/legendre-decomposition-python/blob/master/LICENSE)
 
 ## References
-[[1] Sugiyama, M., Nakahara, H., Tsuda, K. Legendre Decomposition for Tensors. Advances in Neural Information Processing Systems 31(NeurIPS2018), pages 8825-8835, 2018.](https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors)
+[[1] M. Sugiyama, H. Nakahara, K. Tsuda. Legendre Decomposition for Tensors. Advances in Neural Information Processing Systems 31(NeurIPS2018), pages 8825-8835, 2018.](https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors)
 
 [[2] Legendre Decomposition implementaion in C++.](https://github.com/mahito-sugiyama/Legendre-decomposition)
