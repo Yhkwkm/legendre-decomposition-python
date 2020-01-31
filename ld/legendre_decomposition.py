@@ -40,7 +40,7 @@ class LegendreDecomposition:
 
     References
     ----------
-    Sugiyama, M., Nakahara, H., Tsuda, K.
+    M. Sugiyama, H. Nakahara, K. Tsuda.
     "Legendre Decomposition for Tensors".
     Advances in Neural Information Processing Systems 31(NeurIPS2018),
     pages 8825-8835, 2018.
@@ -122,7 +122,22 @@ class LegendreDecomposition:
         return self._reconstruct(self.theta)
 
     def _reconstruct(self, theta, b=None):
-        """
+        r"""Compute decomposable tensor Q from parameter \theta.
+
+        Parameters
+        ----------
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+
+        b : array
+            set of decomposition basis B.
+
+        Returns
+        -------
+        Q : array
+            second/third-order tensor.
+            Decomposable tensor.
         """
         # TODO: need to improve perfomances; use dictionary or numpy function.
         shape = theta.shape
@@ -145,7 +160,23 @@ class LegendreDecomposition:
         return Q
 
     def _compute_eta(self, Q, b=None):
-        """
+        r"""Compute parmaters \eta from decomposable tensor Q.
+
+        Parameters
+        ----------
+        Q : array
+            second/third-order tensor.
+            Decomposable tensor.
+
+        b : array
+            set of decomposition basis B.
+
+        Returns
+        -------
+        eta : array
+            second/third-order tensor.
+            parameter \eta.
+            Same shapes as input tensor P.
         """
         # TODO: need to improve perfomances; use dictionary or numpy function.
         shape = Q.shape
@@ -167,6 +198,19 @@ class LegendreDecomposition:
 
     def _compute_jacobian(self, eta, beta):
         """Compute jacobian matrix, this is what we call Fisher information matrix.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        y : Ignored
+
+        Returns
+        -------
+        g : array, shape (number of basis, number of basis)
+            Fisher information matrix.
         """
         size = len(beta)
         g = np.zeros((size, size))
@@ -191,23 +235,72 @@ class LegendreDecomposition:
         return g
 
     def _calc_rmse(self, P, Q):
-        """
+        """Compute root mean squared error(rmse),
+        which is reconstructed error between input tensor P and reconstrcted tensor Q.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        Q : array
+            second/third-order tensor.
+            Decomposable tensor.
+
+        Returns
+        -------
+        rmse : float
+            rmse of reconstructed error.
         """
         return np.sqrt(np.mean(np.square(P - Q)))
 
     def _check_is_fitted(self):
-        """
+        """Check if fit() has already been executed.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
         """
         raise NotImplementedError()
 
-    def _normalizer(self, X):
-        """
+    def _normalizer(self, P):
+        """normalize input tensor P by summation of P.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        Returns
+        -------
+        norm_P : array
+            second/third-order tensor.
+            Normalized data tensor to be decomposed.
         """
         # TODO: check if tensor has NaN values.
-        return X / np.sum(X)
+        return P / np.sum(P)
 
     def _initialize(self):
-        """
+        """Compute jacobian matrix, this is what we call Fisher information matrix.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        y : Ignored
+
+        Returns
+        -------
+        g : array, shape (number of basis, number of basis)
+            Fisher information matrix.
         """
         theta = np.zeros(self.shape)
         self.prev_Q = np.zeros(self.shape)
@@ -216,8 +309,21 @@ class LegendreDecomposition:
         return theta
 
     # TODO: change the way of generation basis, obey the author's implementation.
-    def _make_basis(self, shape):
-        """
+    def _gen_basis(self, shape):
+        """Generate set of decomposition basis B,
+        which are used for reconstructing tensor Q.
+        This basis are paramters how decomposed input tensor P,
+        thus the basis are directory related to complexity of models.
+
+        Parameters
+        ----------
+        shape : int
+            order of tensor.
+
+        Returns
+        -------
+        beta : list
+            sets of decomposition basis vectors.
         """
         if len(shape) == 2:
             beta = [(i,j) for i, j in itertools.product(range(shape[0]), range(shape[1]))]
@@ -241,7 +347,7 @@ class LegendreDecomposition:
             Data tensor to be decomposed.
 
         beta : list
-            sets of basis vectors.
+            sets of decomposition basis vectors.
 
         Returns
         -------
@@ -281,7 +387,7 @@ class LegendreDecomposition:
             Data tensor to be decomposed.
 
         beta : list
-            sets of basis vectors.
+            sets of decomposition basis vectors.
 
         Returns
         -------
@@ -324,7 +430,20 @@ class LegendreDecomposition:
         return theta
 
     def _legendre_decomposition(self, P):
-        """
+        """Compute Legendre decomposition.
+
+        Parameters
+        ----------
+        P : array
+            second/third-order tensor.
+            Data tensor to be decomposed.
+
+        Returns
+        -------
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+            Used for reconstructing decomposable tensor Q.
         """
         # TODO: need to separately declare P shape and basis shape.
         self.shape = P.shape
@@ -333,7 +452,7 @@ class LegendreDecomposition:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: '%s'." % order)
         # normalize tensor
         P = self._normalizer(P)
-        beta = self._make_basis(self.shape)
+        beta = self._gen_basis(self.shape)
         if self.solver == 'ng':
             theta = self._fit_natural_gradient(P, beta)
         elif self.solver == 'gd':
