@@ -139,7 +139,6 @@ class LegendreDecomposition:
             second/third-order tensor.
             Decomposable tensor.
         """
-        # TODO: need to improve perfomances; use dictionary or numpy function.
         shape = theta.shape
         order = len(shape)
         exp_theta = np.exp(theta)
@@ -178,7 +177,6 @@ class LegendreDecomposition:
             parameter \eta.
             Same shapes as input tensor P.
         """
-        # TODO: need to improve perfomances; use dictionary or numpy function.
         shape = Q.shape
         order = len(Q.shape)
         eta = self.prev_eta
@@ -209,7 +207,7 @@ class LegendreDecomposition:
 
         Returns
         -------
-        g : array, shape (number of basis, number of basis)
+        g : array, shape (cardinality of basis, cardinality of basis)
             Fisher information matrix.
         """
         size = len(beta)
@@ -299,14 +297,24 @@ class LegendreDecomposition:
 
         Returns
         -------
-        g : array, shape (number of basis, number of basis)
-            Fisher information matrix.
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+
+        eta : array
+            second/third-order tensor.
+            parameter \eta.
+            Same shapes as input tensor P.
+
+        Q : array
+            second/third-order tensor.
+            Decomposable tensor.
         """
         theta = np.zeros(self.shape)
-        self.prev_Q = np.zeros(self.shape)
-        self.prev_eta = np.zeros(self.shape)
+        eta = np.zeros(self.shape)
+        Q = np.zeros(self.shape)
 
-        return theta
+        return theta, eta, Q
 
     # TODO: change the way of generation basis, obey the author's implementation.
     def _gen_basis(self, shape):
@@ -355,7 +363,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta = self._initialize()
+        theta, self.prev_eta, self.prev_Q = self._initialize()
         self.eta_hat = self._compute_eta(P)
 
         for n_iter in range(self.max_iter):
@@ -395,7 +403,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta = self._initialize()
+        theta, self.prev_eta, self.prev_Q = self._initialize()
         theta_vec = np.array([theta[v] for v in beta])
         self.eta_hat = self._compute_eta(P)
 
@@ -411,7 +419,7 @@ class LegendreDecomposition:
             # TODO: check performance of different way to calculate inverse matrix.
             # TODO: Algorithm 7, Information Geometric Approaches for Neural Network Algorithms
             #theta_vec -= np.linalg.solve(g, grad_vec)
-            #theta_vec -= linalg.inv(g) * grad_vec
+            #theta_vec -= np.dot(linalg.inv(g), grad_vec)
             try:
                 theta_vec -= np.dot(np.linalg.inv(g), grad_vec)
             except:
