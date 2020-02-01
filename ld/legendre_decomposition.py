@@ -360,7 +360,7 @@ class LegendreDecomposition:
         elif len(shape) == 3:
             beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
         else:
-            raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+            raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(len(shape)))
 
         return beta
 
@@ -395,7 +395,7 @@ class LegendreDecomposition:
             prev_res = self.res
             self.res = self._compute_residual(eta, beta)
             # check convergence
-            if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON < prev_res):
+            if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
                 print("Convergence of theta at n_iter: {}".format(self.converged_n_iter))
                 break
@@ -439,7 +439,7 @@ class LegendreDecomposition:
             prev_res = self.res
             self.res = self._compute_residual(eta, beta)
             # check convergence
-            if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON <= prev_res):
+            if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
                 print("Convergence of theta at n_iter: {}".format(self.converged_n_iter))
                 break
