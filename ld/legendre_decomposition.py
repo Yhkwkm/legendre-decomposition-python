@@ -340,7 +340,49 @@ class LegendreDecomposition:
 
         return theta, eta, Q
 
-    # TODO: change the way of generation basis, obey the author's implementation.
+    def _gen_norm(self, shape):
+        pass
+
+    def _sort_basis(self, v):
+        return self.P[v]
+
+    def _gen_core(self, shape):
+        order = (len(shape))
+        beta = []
+        for i in range(shape[0]):
+            temp_beta = []
+            c_size = self.core_size
+            if order == 2:
+                for j in range(shape[1]):
+                    if self.basis_index[i, j] == 0:
+                        temp_beta.append((i, j))
+            elif order == 3:
+                for j, k in itertools.product(range(shape[1]), range(shape[2])):
+                    if self.basis_index[i, j, k] == 0:
+                        temp_beta.append((i, j, k))
+            if self.shuffle:
+                np.random.shuffle(temp_beta)
+            else:
+                temp_beta.sort(key=self._sort_basis)
+            if c_size > len(temp_beta):
+                c_size = len(temp_beta)
+            for c in range(c_size):
+                beta.append(temp_beta[c])
+                self.basis_index[temp_beta[c]] = 1
+
+        return beta
+
+    def _gen_basis_2(self, shape):
+        """
+        """
+        beta = []
+        self.basis_index = np.zeros(shape)
+        if self.solver == 'ng':
+            beta += self._gen_norm(shape)
+        beta += self._gen_core(shape)
+
+        return beta
+
     def _gen_basis(self, shape):
         """Generate set of decomposition basis B,
         which are used for reconstructing tensor Q.
@@ -507,12 +549,12 @@ class LegendreDecomposition:
         if order not in (2, 3):
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
         # normalize tensor
-        P = self._normalizer(P)
+        self.P = self._normalizer(P)
         beta = self._gen_basis(self.shape)
         if self.solver == 'ng':
-            theta = self._fit_natural_gradient(P, beta)
+            theta = self._fit_natural_gradient(self.P, beta)
         elif self.solver == 'gd':
-            theta = self._fit_gradient_descent(P, beta)
+            theta = self._fit_gradient_descent(self.P, beta)
         else:
             raise ValueError("Invalid solver parameter {}.".format(self.solver))
 
