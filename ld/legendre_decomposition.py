@@ -87,7 +87,7 @@ class LegendreDecomposition:
             Transformed data reconstructed by parameter \theta.
         """
         self.theta = self._legendre_decomposition(P)
-        Q = self._reconstruct(self.theta) * P.sum()
+        Q = self._compute_Q(self.theta) * P.sum()
         self.reconstruction_err_ = self._calc_rmse(P, Q)
 
         return Q
@@ -126,9 +126,9 @@ class LegendreDecomposition:
         """
         self._check_is_fitted()
 
-        return self._reconstruct(self.theta)
+        return self._compute_Q(self.theta)
 
-    def _reconstruct(self, theta, b=None):
+    def _compute_Q(self, theta, b=None):
         r"""Compute decomposable tensor Q from parameter \theta.
 
         Parameters
@@ -394,7 +394,7 @@ class LegendreDecomposition:
         self.res = 0.
 
         for n_iter in range(self.max_iter):
-            eta = self._compute_eta(self._reconstruct(theta))
+            eta = self._compute_eta(self._compute_Q(theta))
             if self.verbose:
                 print("\n\n============= iteration: {}, eta =============".format(n_iter))
                 print(eta)
@@ -411,7 +411,7 @@ class LegendreDecomposition:
 
             for v in beta:
                 # \theta_v \gets \theta_v - \epsilon \times (\eta_v - \hat{\eta_v})
-                grad = self._compute_eta(self._reconstruct(theta)) - self.eta_hat
+                grad = self._compute_eta(self._compute_Q(theta)) - self.eta_hat
                 theta[v] -= self.learning_rate * grad[v]
 
             if self.verbose:
@@ -442,12 +442,12 @@ class LegendreDecomposition:
             Same shapes as input tensor P.
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
-        theta_vec = np.array([theta[v] for v in beta])
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
+        theta_vec = np.array([theta[v] for v in beta])
 
         for n_iter in range(self.max_iter):
-            eta = self._compute_eta(self._reconstruct(theta))
+            eta = self._compute_eta(self._compute_Q(theta))
             if self.verbose:
                 print("\n\n============= iteration: {}, eta =============".format(n_iter))
                 print(eta)
