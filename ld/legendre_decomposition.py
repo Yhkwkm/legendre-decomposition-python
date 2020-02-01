@@ -285,7 +285,7 @@ class LegendreDecomposition:
         return P / np.sum(P)
 
     def _initialize(self):
-        """Compute jacobian matrix, this is what we call Fisher information matrix.
+        r"""Initialize paramters \theta, \eta and decomposable tensor Q.
 
         Parameters
         ----------
