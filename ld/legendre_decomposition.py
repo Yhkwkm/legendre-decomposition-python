@@ -53,8 +53,8 @@ class LegendreDecomposition:
     """
 
     def __init__(self, core_size=2, depth_size=4, solver='ng',
-                 tol=1e-4, max_iter=5, learning_rate=0.001,
-                 random_state=None, verbose=0, shuffle=False):
+                 tol=1e-4, max_iter=5, learning_rate=0.1,
+                 random_state=None, shuffle=False, verbose=0):
         self.core_size = core_size
         self.depth_size = depth_size
         self.solver = solver
@@ -62,8 +62,10 @@ class LegendreDecomposition:
         self.max_iter = max_iter
         self.learning_rate = learning_rate
         self.random_state = random_state
-        self.verbose = verbose
         self.shuffle = shuffle
+        self.verbose = verbose
+        if self.verbose:
+            np.set_printoptions(threshold=200)
 
     def fit_transform(self, P, y=None):
         r"""Learn a Legendre Decomposition model for the data P and
@@ -361,7 +363,9 @@ class LegendreDecomposition:
             beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(len(shape)))
-
+        if self.verbose:
+            print("\n\n============= set of basis =============")
+            print(beta)
         return beta
 
     def _fit_gradient_descent(self, P, beta):
@@ -387,23 +391,32 @@ class LegendreDecomposition:
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
         self.eta_hat = self._compute_eta(P)
-        self.res = 0
+        self.res = 0.
 
         for n_iter in range(self.max_iter):
             eta = self._compute_eta(self._reconstruct(theta))
+            if self.verbose:
+                print("\n\n============= iteration: {}, eta =============".format(n_iter))
+                print(eta)
 
             prev_res = self.res
             self.res = self._compute_residual(eta, beta)
+            if self.verbose:
+                print("n_iter: {}, Residual: {}".format(n_iter, self.res))
             # check convergence
             if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
-                print("Convergence of theta at n_iter: {}".format(self.converged_n_iter))
+                print("Convergence of theta at iteration: {}".format(self.converged_n_iter))
                 break
 
             for v in beta:
                 # \theta_v \gets \theta_v - \epsilon \times (\eta_v - \hat{\eta_v})
                 grad = self._compute_eta(self._reconstruct(theta)) - self.eta_hat
                 theta[v] -= self.learning_rate * grad[v]
+
+            if self.verbose:
+                print("\n\n============= iteration: {}, theta =============".format(n_iter))
+                print(theta)
 
         return theta
 
@@ -431,17 +444,22 @@ class LegendreDecomposition:
         theta, self.prev_eta, self.prev_Q = self._initialize()
         theta_vec = np.array([theta[v] for v in beta])
         self.eta_hat = self._compute_eta(P)
-        self.res = 0
+        self.res = 0.
 
         for n_iter in range(self.max_iter):
             eta = self._compute_eta(self._reconstruct(theta))
+            if self.verbose:
+                print("\n\n============= iteration: {}, eta =============".format(n_iter))
+                print(eta)
 
             prev_res = self.res
             self.res = self._compute_residual(eta, beta)
+            if self.verbose:
+                print("n_iter: {}, Residual: {}".format(n_iter, self.res))
             # check convergence
             if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
-                print("Convergence of theta at n_iter: {}".format(self.converged_n_iter))
+                print("Convergence of theta at iteration: {}".format(self.converged_n_iter))
                 break
 
             # compute \eta_delta and Fisher information matrix.
@@ -460,6 +478,10 @@ class LegendreDecomposition:
             # Update theta
             for n, v in enumerate(beta):
                 theta[v] = theta_vec[n]
+
+            if self.verbose:
+                print("\n\n============= iteration: {}, theta =============".format(n_iter))
+                print(theta)
 
         return theta
 
@@ -482,7 +504,7 @@ class LegendreDecomposition:
         # TODO: need to separately declare P shape and basis shape.
         self.shape = P.shape
         order = len(P.shape)
-        if order >= 4:
+        if order not in (2, 3):
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
         # normalize tensor
         P = self._normalizer(P)
