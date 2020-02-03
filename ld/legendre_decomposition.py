@@ -347,7 +347,7 @@ class LegendreDecomposition:
         return self.P[v]
 
     def _gen_core(self, shape):
-        order = (len(shape))
+        order = len(shape)
         beta = []
         for i in range(shape[0]):
             temp_beta = []
@@ -360,6 +360,8 @@ class LegendreDecomposition:
                 for j, k in itertools.product(range(shape[1]), range(shape[2])):
                     if self.basis_index[i, j, k] == 0:
                         temp_beta.append((i, j, k))
+            else:
+                raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
             if self.shuffle:
                 np.random.shuffle(temp_beta)
             else:
