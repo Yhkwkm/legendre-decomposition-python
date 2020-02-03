@@ -258,7 +258,7 @@ class LegendreDecomposition:
         -------
         residual : float
         """
-        res = np.sqrt(np.sum([(eta[v] - self.eta_hat[v])**2 for v in beta]))
+        res = np.sqrt(np.mean([(eta[v] - self.eta_hat[v])**2 for v in beta]))
         return res
 
     def _calc_rmse(self, P, Q):
