@@ -8,7 +8,7 @@ from enum import Enum
 #from sklearn.base import TransformerMixin, BaseEstimator
 
 # TODO: Support scipy sparse matrix.
-# TODO: Improve performance to use dynamic programming in compute_P or compute_eta, using cython
+# TODO: Improve performance to use dynamic programming in compute_Q or compute_eta, using cython
 # TODO: Update docstring and comments.
 
 class Constants(Enum):
@@ -152,6 +152,7 @@ class LegendreDecomposition:
         Q = self.prev_Q
         if b == None:
             b = [0 for i in range(order)]
+
         if order == 2:
             for i, j in itertools.product(range(b[0], shape[0]), range(b[1], shape[1])):
                 Q[i, j] = exp_theta[np.arange(0, i+1)][:, np.arange(0, j+1)].prod()
@@ -160,9 +161,11 @@ class LegendreDecomposition:
                 Q[i, j, k] = exp_theta[np.arange(0, i+1)][:, np.arange(0, j+1)][:, :, np.arange(0, k+1)].prod()
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+
         psi = Q.sum()
         Q /= psi
         self.prev_Q = Q.copy()
+
         return Q
 
     def _compute_eta(self, Q, b=None):
@@ -189,6 +192,7 @@ class LegendreDecomposition:
         eta = self.prev_eta
         if b == None:
             b = [0 for i in range(order)]
+
         if order == 2:
             for i, j in itertools.product(range(b[0], shape[0]), range(b[1], shape[1])):
                 eta[i, j] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])].sum()
@@ -197,6 +201,7 @@ class LegendreDecomposition:
                 eta[i, j, k] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])][:, :, np.arange(k, shape[2])].sum()
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+
         self.prev_eta = eta.copy()
 
         return eta
@@ -253,7 +258,7 @@ class LegendreDecomposition:
         -------
         residual : float
         """
-        res = np.sqrt(np.sum([(eta[v] - self.eta_hat[v])**2 for v in beta]))
+        res = np.sqrt(np.mean([(eta[v] - self.eta_hat[v])**2 for v in beta]))
         return res
 
     def _calc_rmse(self, P, Q):
@@ -341,14 +346,73 @@ class LegendreDecomposition:
         return theta, eta, Q
 
     def _gen_norm(self, shape):
-        pass
+        """
 
-    def _sort_basis(self, v):
+        Parameters
+        ----------
+
+        Returns
+        -------
+        theta : array
+        """
+        order = len(shape)
+        beta = []
+        temp_beta = []
+
+        if order == 2:
+            # B_1
+            for i in range(shape[0]):
+                if self.basis_index[i, 0] == 0:
+                    temp_beta.append((i, 0))
+            for j in range(shape[1]):
+                if self.basis_index[0, j] == 0:
+                    temp_beta.append((0, j))
+        elif order == 3:
+            # B_1
+            for i in range(shape[0]):
+                if self.basis_index[i, 0, 0] == 0:
+                    temp_beta.append((i, 0, 0))
+            for j in range(shape[1]):
+                if self.basis_index[0, j, 0] == 0:
+                    temp_beta.append((0, j, 0))
+            for k in range(shape[2]):
+                if self.basis_index[0, 0, k] == 0:
+                    temp_beta.append((0, 0, k))
+
+            # B_2
+            for i in [c * np.floor(shape[0] / self.core_size) for c in range(self.core_size)]:
+                for j in [c * np.floor(shape[1] / self.core_size) for c in range(self.core_size)]:
+                    if self.basis_index[i, j, 0] == 0:
+                        temp_beta.append((i, j, 0))
+                for k in [c * np.floor(shape[2] / self.core_size) for c in range(self.core_size)]:
+                    if self.basis_index[i, 0, k] == 0:
+                            temp_beta.append((i, 0, k))
+        else:
+            raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+
+        _beta = list(set(temp_beta))
+        for c in range(len(_beta)):
+            beta.append(_beta[c])
+            self.basis_index[_beta[c]] = 1
+
+        return beta
+
+    def _get_P_value(self, v):
         return self.P[v]
 
     def _gen_core(self, shape):
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        theta : array
+        """
         order = len(shape)
         beta = []
+        # B_3
         for i in range(shape[0]):
             temp_beta = []
             c_size = self.core_size
@@ -365,7 +429,8 @@ class LegendreDecomposition:
             if self.shuffle:
                 np.random.shuffle(temp_beta)
             else:
-                temp_beta.sort(key=self._sort_basis)
+                temp_beta.sort(key=self._get_P_value)
+
             if c_size > len(temp_beta):
                 c_size = len(temp_beta)
             for c in range(c_size):
@@ -374,18 +439,21 @@ class LegendreDecomposition:
 
         return beta
 
-    def _gen_basis_2(self, shape):
+    def _gen_basis(self, shape):
         """
         """
-        beta = []
         self.basis_index = np.zeros(shape)
+        beta = []
+        # exclude all zero basis for a technical reason.
+        beta.append(tuple(np.zeros(3).astype(int)))
+
         if self.solver == 'ng':
             beta += self._gen_norm(shape)
         beta += self._gen_core(shape)
 
         return beta
 
-    def _gen_basis(self, shape):
+    def _gen_basis_old(self, shape):
         """Generate set of decomposition basis B,
         which are used for reconstructing tensor Q.
         This basis are paramters how decomposed input tensor P,
@@ -407,6 +475,7 @@ class LegendreDecomposition:
             beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(len(shape)))
+
         if self.verbose:
             print("\n\n============= set of basis =============")
             print(beta)
@@ -447,6 +516,7 @@ class LegendreDecomposition:
             self.res = self._compute_residual(eta, beta)
             if self.verbose:
                 print("n_iter: {}, Residual: {}".format(n_iter, self.res))
+
             # check convergence
             if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
@@ -500,6 +570,7 @@ class LegendreDecomposition:
             self.res = self._compute_residual(eta, beta)
             if self.verbose:
                 print("n_iter: {}, Residual: {}".format(n_iter, self.res))
+
             # check convergence
             if (self.res <= self.tol) or (prev_res <= self.res and Constants.EPSILON.value <= prev_res):
                 self.converged_n_iter = n_iter
@@ -519,6 +590,7 @@ class LegendreDecomposition:
                 theta_vec -= np.dot(np.linalg.inv(g), grad_vec)
             except:
                 theta_vec -= np.dot(np.linalg.pinv(g), grad_vec)
+
             # Update theta
             for n, v in enumerate(beta):
                 theta[v] = theta_vec[n]
@@ -550,9 +622,11 @@ class LegendreDecomposition:
         order = len(P.shape)
         if order not in (2, 3):
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+
         # normalize tensor
         self.P = self._normalizer(P)
         beta = self._gen_basis(self.shape)
+
         if self.solver == 'ng':
             theta = self._fit_natural_gradient(self.P, beta)
         elif self.solver == 'gd':
