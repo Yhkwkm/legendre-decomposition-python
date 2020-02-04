@@ -346,14 +346,18 @@ class LegendreDecomposition:
         return theta, eta, Q
 
     def _gen_norm(self, shape):
-        """
+        """Generate set of decomposition basis B
+        for Natural Gradient-based algorithm
 
         Parameters
         ----------
+        shape : int
+            shapes of the input tensor P.
 
         Returns
         -------
-        theta : array
+        beta : list
+            set of decomposition basis vectors.
         """
         order = len(shape)
         beta = []
@@ -367,6 +371,7 @@ class LegendreDecomposition:
             for j in range(shape[1]):
                 if self.basis_index[0, j] == 0:
                     temp_beta.append((0, j))
+
         elif order == 3:
             # B_1
             for i in range(shape[0]):
@@ -380,20 +385,35 @@ class LegendreDecomposition:
                     temp_beta.append((0, 0, k))
 
             # B_2
-            for i in [c * np.floor(shape[0] / self.core_size) for c in range(self.core_size)]:
-                for j in [c * np.floor(shape[1] / self.core_size) for c in range(self.core_size)]:
+            if self.core_size < shape[0]:
+                index_0 = [c * np.floor(shape[0] / self.core_size) for c in range(self.core_size)]
+            else:
+                index_0 = [c for c in range(shape[0])]
+
+            if self.core_size < shape[1]:
+                index_1 = [c * np.floor(shape[1] / self.core_size) for c in range(self.core_size)]
+            else:
+                index_1 = [c for c in range(shape[1])]
+
+            if self.core_size < shape[2]:
+                index_2 = [c * np.floor(shape[2] / self.core_size) for c in range(self.core_size)]
+            else:
+                index_2 = [c for c in range(shape[2])]
+
+            for i in index_0:
+                for j in index_1:
                     if self.basis_index[i, j, 0] == 0:
                         temp_beta.append((i, j, 0))
-                for k in [c * np.floor(shape[2] / self.core_size) for c in range(self.core_size)]:
+                for k in index_2:
                     if self.basis_index[i, 0, k] == 0:
                             temp_beta.append((i, 0, k))
+
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
 
-        _beta = list(set(temp_beta))
-        for c in range(len(_beta)):
-            beta.append(_beta[c])
-            self.basis_index[_beta[c]] = 1
+        for c in range(len(temp_beta)):
+            beta.append(temp_beta[c])
+            self.basis_index[temp_beta[c]] = 1
 
         return beta
 
@@ -401,14 +421,17 @@ class LegendreDecomposition:
         return self.P[v]
 
     def _gen_core(self, shape):
-        """
+        """Generate set of decomposition basis B.
 
         Parameters
         ----------
+        shape : int
+            shapes of the input tensor P.
 
         Returns
         -------
-        theta : array
+        beta : list
+            set of decomposition basis vectors.
         """
         order = len(shape)
         beta = []
@@ -440,12 +463,25 @@ class LegendreDecomposition:
         return beta
 
     def _gen_basis(self, shape):
-        """
+        """Generate set of decomposition basis B,
+        which are used for reconstructing tensor Q.
+        This basis are paramters how decomposed input tensor P,
+        thus the basis are directory related to complexity of models.
+
+        Parameters
+        ----------
+        shape : int
+            shapes of the input tensor P.
+
+        Returns
+        -------
+        beta : list
+            set of decomposition basis vectors.
         """
         self.basis_index = np.zeros(shape)
         beta = []
         # exclude all zero basis for a technical reason.
-        beta.append(tuple(np.zeros(3).astype(int)))
+        self.basis_index[tuple(np.zeros(len(shape)).astype(int))] = 1
 
         if self.solver == 'ng':
             beta += self._gen_norm(shape)
@@ -462,12 +498,12 @@ class LegendreDecomposition:
         Parameters
         ----------
         shape : int
-            order of tensor.
+            shapes of the input tensor P.
 
         Returns
         -------
         beta : list
-            sets of decomposition basis vectors.
+            set of decomposition basis vectors.
         """
         if len(shape) == 2:
             beta = [(i,j) for i, j in itertools.product(range(shape[0]), range(shape[1]))]
