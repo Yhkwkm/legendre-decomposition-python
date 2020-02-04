@@ -500,7 +500,7 @@ class LegendreDecomposition:
             else:
                 temp_beta.sort(key=self._get_P_value)
 
-            if c_size > len(temp_beta):
+            if len(temp_beta) < c_size:
                 c_size = len(temp_beta)
             for c in range(c_size):
                 beta.append(temp_beta[c])
