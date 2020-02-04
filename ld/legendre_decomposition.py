@@ -19,7 +19,6 @@ class NotFittedError(ValueError, AttributeError):
     """Exception class to raise if estimator is used before fitting.
     This class inherits from both ValueError and AttributeError to help with
     exception handling and backward compatibility.
-    Examples
     """
 
 
@@ -60,11 +59,10 @@ class LegendreDecomposition:
     https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors
     """
 
-    def __init__(self, core_size=2, depth_size=4, solver='ng',
+    def __init__(self, core_size=2, solver='ng',
                  tol=1e-4, max_iter=5, learning_rate=0.1,
                  random_state=None, shuffle=False, verbose=0):
         self.core_size = core_size
-        self.depth_size = depth_size
         self.solver = solver
         self.tol = tol
         self.max_iter = max_iter
@@ -497,6 +495,7 @@ class LegendreDecomposition:
                 raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
 
             if self.shuffle:
+                np.random.seed(seed=self.random_state)
                 np.random.shuffle(temp_beta)
             else:
                 temp_beta.sort(key=self._get_P_value)
