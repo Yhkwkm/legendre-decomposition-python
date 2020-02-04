@@ -225,9 +225,7 @@ class LegendreDecomposition:
         size = len(beta)
         g = np.zeros((size, size))
         order = len(eta.shape)
-        # TODO: consider the way of creating vector.
-        # In author's code, the indexes of vector are randomly generated.
-        # https://github.com/mahito-sugiyama/Legendre-decomposition/blob/master/src/cc/legendre_decomposition.h#L211
+
         if order == 2:
             for i, j in itertools.product(range(size), range(size)):
                 g[i, j] = eta[np.max((beta[i][0], beta[j][0])), \
@@ -653,7 +651,6 @@ class LegendreDecomposition:
             Same shapes as input tensor P.
             Used for reconstructing decomposable tensor Q.
         """
-        # TODO: need to separately declare P shape and basis shape.
         self.shape = P.shape
         order = len(P.shape)
         if order not in (2, 3):
