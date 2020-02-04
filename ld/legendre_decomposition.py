@@ -430,17 +430,17 @@ class LegendreDecomposition:
 
             # B_2
             if self.core_size < shape[0]:
-                index_0 = [c * np.floor(shape[0] / self.core_size) for c in range(self.core_size)]
+                index_0 = [int(c * np.floor(shape[0] / self.core_size)) for c in range(self.core_size)]
             else:
                 index_0 = [c for c in range(shape[0])]
 
             if self.core_size < shape[1]:
-                index_1 = [c * np.floor(shape[1] / self.core_size) for c in range(self.core_size)]
+                index_1 = [int(c * np.floor(shape[1] / self.core_size)) for c in range(self.core_size)]
             else:
                 index_1 = [c for c in range(shape[1])]
 
             if self.core_size < shape[2]:
-                index_2 = [c * np.floor(shape[2] / self.core_size) for c in range(self.core_size)]
+                index_2 = [int(c * np.floor(shape[2] / self.core_size)) for c in range(self.core_size)]
             else:
                 index_2 = [c for c in range(shape[2])]
 
