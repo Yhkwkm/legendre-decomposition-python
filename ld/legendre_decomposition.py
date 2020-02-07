@@ -10,6 +10,7 @@ from enum import Enum
 # TODO: Support scipy sparse matrix.
 # TODO: Improve performance to use dynamic programming in compute_Q or compute_eta, using cython
 # TODO: Update docstring and comments.
+# TODO: Check scope of class variables.
 
 class Constants(Enum):
     EPSILON = 1e-100
@@ -61,7 +62,7 @@ class LegendreDecomposition:
 
     def __init__(self, core_size=2, solver='ng',
                  tol=1e-4, max_iter=5, learning_rate=0.1,
-                 random_state=None, shuffle=False, verbose=0):
+                 random_state=42, shuffle=False, verbose=0):
         self.core_size = core_size
         self.solver = solver
         self.tol = tol
@@ -456,8 +457,9 @@ class LegendreDecomposition:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
 
         for c in range(len(temp_beta)):
-            beta.append(temp_beta[c])
-            self.basis_index[temp_beta[c]] = 1
+            if self.basis_index[temp_beta[c]] == 0:
+                beta.append(temp_beta[c])
+                self.basis_index[temp_beta[c]] = 1
 
         return beta
 
@@ -708,6 +710,9 @@ class LegendreDecomposition:
         # normalize tensor
         self.P = self._normalizer(P)
         self.beta = self._gen_basis(self.shape)
+        if self.verbose:
+            print("\n\n============= beta =============")
+            print(self.beta)
 
         if self.solver == 'ng':
             theta = self._fit_natural_gradient(self.P, self.beta)
