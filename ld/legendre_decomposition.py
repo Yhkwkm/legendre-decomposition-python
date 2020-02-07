@@ -560,14 +560,14 @@ class LegendreDecomposition:
             Same shapes as input tensor P.
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
+        self.eta_hat = self._compute_eta(P)
+        self.res = 0.
         if self.verbose:
             print("\n\n============= theta =============")
             print(theta)
             print("\n\n============= eta_hat =============")
             print(self.eta_hat)
 
-        self.eta_hat = self._compute_eta(P)
-        self.res = 0.
 
         for n_iter in range(self.max_iter):
             eta = self._compute_eta(self._compute_Q(theta))
@@ -620,14 +620,13 @@ class LegendreDecomposition:
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
         self.eta_hat = self._compute_eta(P)
+        self.res = 0.
+        theta_vec = np.array([theta[v] for v in beta])
         if self.verbose:
             print("\n\n============= theta =============")
             print(theta)
             print("\n\n============= eta_hat =============")
             print(self.eta_hat)
-
-        self.res = 0.
-        theta_vec = np.array([theta[v] for v in beta])
 
         for n_iter in range(self.max_iter):
             eta = self._compute_eta(self._compute_Q(theta))
