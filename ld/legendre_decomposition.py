@@ -538,35 +538,6 @@ class LegendreDecomposition:
 
         return beta
 
-    def _gen_basis_old(self, shape):
-        """Generate set of decomposition basis B,
-        which are used for reconstructing tensor Q.
-        This basis are paramters how decomposed input tensor P,
-        thus the basis are directory related to complexity of models.
-
-        Parameters
-        ----------
-        shape : int
-            shapes of the input tensor P.
-
-        Returns
-        -------
-        beta : list
-            set of decomposition basis vectors.
-        """
-        if len(shape) == 2:
-            beta = [(i,j) for i, j in itertools.product(range(shape[0]), range(shape[1]))]
-        elif len(shape) == 3:
-            beta = [(i,j,k) for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2]))]
-        else:
-            raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(len(shape)))
-
-        if self.verbose:
-            print("\n\n============= set of basis =============")
-            print(beta)
-
-        return beta
-
     def _fit_gradient_descent(self, P, beta):
         r"""Compute parameter \theta using Gradient Descent-based optimization algorithms.
 
