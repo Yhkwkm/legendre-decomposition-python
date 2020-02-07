@@ -12,6 +12,7 @@ from enum import Enum
 # TODO: Update docstring and comments.
 # TODO: Check scope of class variables.
 
+
 class Constants(Enum):
     EPSILON = 1e-100
 
@@ -588,6 +589,12 @@ class LegendreDecomposition:
             Same shapes as input tensor P.
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
+        if self.verbose:
+            print("\n\n============= theta =============")
+            print(theta)
+            print("\n\n============= eta_hat =============")
+            print(self.eta_hat)
+
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
 
@@ -642,6 +649,12 @@ class LegendreDecomposition:
         """
         theta, self.prev_eta, self.prev_Q = self._initialize()
         self.eta_hat = self._compute_eta(P)
+        if self.verbose:
+            print("\n\n============= theta =============")
+            print(theta)
+            print("\n\n============= eta_hat =============")
+            print(self.eta_hat)
+
         self.res = 0.
         theta_vec = np.array([theta[v] for v in beta])
 
@@ -662,19 +675,36 @@ class LegendreDecomposition:
                 print("Convergence of theta at iteration: {}".format(self.converged_n_iter))
                 break
 
-            # compute \eta_delta and Fisher information matrix.
-            grad = eta - self.eta_hat
-            grad_vec = np.array([grad[v] for v in beta])
-            g = self._compute_jacobian(eta, beta)
+            # compute \delta\eta and Fisher information matrix.
+            delta_eta = eta - self.eta_hat
+            eta_vec = np.array([delta_eta[v] for v in beta])
+            G = self._compute_jacobian(eta, beta)
+            if self.verbose:
+                print("\n\n============= iteration: {}, delta_eta =============".format(n_iter))
+                print(delta_eta)
+                print("\n\n============= iteration: {}, eta_vec =============".format(n_iter))
+                print(eta_vec)
+                print("\n\n============= iteration: {}, G =============".format(n_iter))
+                print(G)
 
             # TODO: check performance of different way to calculate inverse matrix.
             # TODO: Algorithm 7, Information Geometric Approaches for Neural Network Algorithms
-            #theta_vec -= np.linalg.solve(g, grad_vec)
-            #theta_vec -= np.dot(linalg.inv(g), grad_vec)
+            # theta_vec -= np.linalg.solve(G, eta_vec)
+            # theta_vec -= np.dot(linalg.inv(G), eta_vec)
             try:
-                theta_vec -= np.dot(np.linalg.inv(g), grad_vec)
+                theta_vec -= np.dot(np.linalg.inv(G), eta_vec)
             except:
-                theta_vec -= np.dot(np.linalg.pinv(g), grad_vec)
+                theta_vec -= np.dot(np.linalg.pinv(G), eta_vec)
+
+            if self.verbose:
+                try:
+                    G_inv = np.linalg.inv(G)
+                except:
+                    G_inv = np.linalg.pinv(G)
+                print("\n\n============= iteration: {}, G_inverse =============".format(n_iter))
+                print(G_inv)
+                print("\n\n============= iteration: {}, theta_vec =============".format(n_iter))
+                print(theta_vec)
 
             # Update theta
             for n, v in enumerate(beta):
