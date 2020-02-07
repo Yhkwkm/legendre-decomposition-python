@@ -5,7 +5,7 @@ An implementation of Legendre Decomposition in Python.
 
 ## Description
 
-An implementation of the Legendre Decomposition[[1]](https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors) in Python(>=3.6), which is non-negative tensor decomposition method using information geometric formulation of the log-linear mode which we can solve as a convex optimization problem.
+An implementation of the Legendre Decomposition[[1]](https://papers.nips.cc/paper/8097-legendre-decomposition-for-tensors) in Python(>=3.6), which is non-negative tensor decomposition method using information geometric formulation of the log-linear model which we can solve as a convex optimization problem.
 
 This is not an official implementation and the author's implementation in C++ is available here [[2]](https://github.com/mahito-sugiyama/Legendre-decomposition).
 
