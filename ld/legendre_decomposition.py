@@ -136,8 +136,8 @@ class LegendreDecomposition:
 
         return self._compute_Q(self.theta)
 
-    def _compute_Q(self, theta, b=None):
-        r"""Compute decomposable tensor Q from parameter \theta using Dynamic Programming.
+    def _compute_Q_(self, theta, b=None):
+        r"""Compute decomposable tensor Q from parameter \theta.
 
         Parameters
         ----------
@@ -176,7 +176,7 @@ class LegendreDecomposition:
 
         return Q
 
-    def _compute_eta_(self, Q, b=None):
+    def _compute_eta_(self, Q):
         r"""Compute parmaters \eta from decomposable tensor Q.
 
         Parameters
@@ -184,9 +184,6 @@ class LegendreDecomposition:
         Q : array
             second/third-order tensor.
             Decomposable tensor.
-
-        b : array
-            set of decomposition basis B.
 
         Returns
         -------
@@ -198,14 +195,12 @@ class LegendreDecomposition:
         shape = Q.shape
         order = len(Q.shape)
         eta = self.prev_eta
-        if b == None:
-            b = [0 for i in range(order)]
 
         if order == 2:
-            for i, j in itertools.product(range(b[0], shape[0]), range(b[1], shape[1])):
+            for i, j in itertools.product(range(shape[0]), range(shape[1])):
                 eta[i, j] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])].sum()
         elif order == 3:
-            for i, j, k in itertools.product(range(b[0], shape[0]), range(b[1], shape[1]), range(b[2], shape[2])):
+            for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2])):
                 eta[i, j, k] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])][:, :, np.arange(k, shape[2])].sum()
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
@@ -215,7 +210,7 @@ class LegendreDecomposition:
         return eta
 
     # This method seems to be faster than self._compute_eta_
-    def _compute_eta(self, Q, b=None):
+    def _compute_eta(self, Q):
         r"""Compute parmaters \eta from decomposable tensor Q using Dynamic Programming.
 
         Parameters
@@ -223,9 +218,6 @@ class LegendreDecomposition:
         Q : array
             second/third-order tensor.
             Decomposable tensor.
-
-        b : array
-            set of decomposition basis B.
 
         Returns
         -------
@@ -237,51 +229,49 @@ class LegendreDecomposition:
         idx = [i - 1 for i in Q.shape]
         order = len(Q.shape)
         eta = self.prev_eta
-        if b == None:
-            b = [0 for i in range(order)]
 
         if order == 2:
             eta[idx[0], idx[1]] = Q[idx[0], idx[1]]
 
             # update outside eta.
-            for i in range(b[0], idx[0])[::-1]:
+            for i in range(idx[0])[::-1]:
                 eta[i, idx[1]] = eta[i+1, idx[1]] + Q[i, idx[1]]
-            for j in range(b[1], idx[1])[::-1]:
+            for j in range(idx[1])[::-1]:
                 eta[idx[0], j] = eta[idx[0], j+1] + Q[idx[0], j]
 
             # update internal eta.
-            for i in range(b[0], idx[0])[::-1]:
-                for j in range(b[1], idx[1])[::-1]:
+            for i in range(idx[0])[::-1]:
+                for j in range(idx[1])[::-1]:
                     eta[i, j] = eta[i+1, j] + eta[i, j+1] + Q[i, j] - eta[i+1, j+1]
 
         elif order == 3:
             eta[idx[0], idx[1], idx[2]] = Q[idx[0], idx[1], idx[2]]
 
             # update outside eta.
-            for i in range(b[0], idx[0])[::-1]:
+            for i in range(idx[0])[::-1]:
                 eta[i, idx[1], idx[2]] = eta[i+1, idx[1], idx[2]] + Q[i, idx[1], idx[2]]
-            for j in range(b[1], idx[1])[::-1]:
+            for j in range(idx[1])[::-1]:
                 eta[idx[0], j, idx[2]] = eta[idx[0], j+1, idx[2]] + Q[idx[0], j, idx[2]]
-            for k in range(b[1], idx[2])[::-1]:
+            for k in range(idx[2])[::-1]:
                 eta[idx[0], idx[1], k] = eta[idx[0], idx[1], k+1] + Q[idx[0], idx[1], k]
 
             # update internal eta.
-            for i in range(b[0], idx[0])[::-1]:
-                for j in range(b[1], idx[1])[::-1]:
+            for i in range(idx[0])[::-1]:
+                for j in range(idx[1])[::-1]:
                     eta[i, j, idx[2]] = eta[i+1, j, idx[2]] + eta[i, j+1, idx[2]] \
                                             + Q[i, j, idx[2]] - eta[i+1, j+1, idx[2]]
-            for j in range(b[1], idx[1])[::-1]:
-                for k in range(b[2], idx[2])[::-1]:
+            for j in range(idx[1])[::-1]:
+                for k in range(idx[2])[::-1]:
                     eta[idx[0], j, k] = eta[idx[0], j+1, k] + eta[idx[0], j, k+1] \
                                             + Q[idx[0], j, k] - eta[idx[0], j+1, k+1]
-            for i in range(b[0], idx[0])[::-1]:
-                for k in range(b[2], idx[2])[::-1]:
+            for i in range(idx[0])[::-1]:
+                for k in range(idx[2])[::-1]:
                     eta[i, idx[1], k] = eta[i+1, idx[1], k] + eta[i, idx[1], k+1] \
                                             + Q[i, idx[1], k] - eta[i+1, idx[1], k+1]
 
-            for i in range(b[0], idx[0])[::-1]:
-                for j in range(b[1], idx[1])[::-1]:
-                    for k in range(b[2], idx[2])[::-1]:
+            for i in range(idx[0])[::-1]:
+                for j in range(idx[1])[::-1]:
+                    for k in range(idx[2])[::-1]:
                         eta[i, j, k] = Q[i, j, k] + eta[i+1, j, k] + eta[i, j+1, k] + eta[i, j, k+1] \
                                         - eta[i+1, j+1, k] - eta[i+1, j, k+1] - eta[i, j+1, k+1] \
                                         + eta[i+1, j+1, k+1]
