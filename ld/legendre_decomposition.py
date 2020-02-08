@@ -361,7 +361,7 @@ class LegendreDecomposition:
                 eta[idx[0], j, k] = Q[idx[0], j, k] + eta[idx[0], j+1, k] \
                                         + eta[idx[0], j, k+1] - eta[idx[0], j+1, k+1]
             for i, k in itertools.product(range(idx[0])[::-1], range(idx[2])[::-1]):
-                eta[i, idx[1], k] = Q[i, idx[1], k] + eta[i+1, idx[1], k]\
+                eta[i, idx[1], k] = Q[i, idx[1], k] + eta[i+1, idx[1], k] \
                                         + eta[i, idx[1], k+1] - eta[i+1, idx[1], k+1]
 
             for i, j, k in itertools.product(range(idx[0])[::-1], range(idx[1])[::-1], range(idx[2])[::-1]):
@@ -663,8 +663,9 @@ class LegendreDecomposition:
             if len(temp_beta) < c_size:
                 c_size = len(temp_beta)
             for c in range(c_size):
-                beta.append(temp_beta[c])
-                self.basis_index[temp_beta[c]] = 1
+                if self.basis_index[temp_beta[c]] == 0:
+                    beta.append(temp_beta[c])
+                    self.basis_index[temp_beta[c]] = 1
 
         return beta
 
