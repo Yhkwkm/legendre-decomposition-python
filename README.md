@@ -26,11 +26,34 @@ reconst_tensor = ld.fit_transform(P)
 
 `LegendreDecomposition` offers some options including the following:
 
-- `solver`: Type of solver:
-  - `'ng'`: natural gradient method.
-  - `'gd'`: gradient descent method.
-- `max_iter`: The number of iterations of the solver.
-- `learning_rate`: Learning rate for gradient descent method.
+- `core_size` : integer, default: 2
+  - The parameter for a decomposition basis.
+
+- `solver` : `ng` | `gd`, default: `ng`
+  - Type of solver.
+    - `ng`: natural gradient method.
+    - `gd`: gradient descent method.
+
+- `tol` : float, default: 1e-4
+  - Tolerance of the stopping condition.
+
+- `max_iter` : integer, default: 10
+  - Maximum number of iterations before timing out.
+
+- `learning_rate` : float, default: 0.1
+  - The learning rate used in gradient descent method.
+
+- `random_state` : int, RandomState instance, default=None
+  - Used to randomize selection of a decomposition basis, when
+    ``shuffle`` is set to ``True``. Pass an int for reproducible
+    results across multiple function calls.
+    See :term:`Glossary <random_state>`.
+
+- `shuffle` : boolean, default: False
+  - If true, randomize selection of a decomposition basis.
+
+- `verbose` : integer, default: 0
+  - The verbosity level.
 
 As of now, it doesn't support order of input tensor more than 4, means it supports second or third order.
 
