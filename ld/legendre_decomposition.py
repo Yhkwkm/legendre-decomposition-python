@@ -95,7 +95,7 @@ class LegendreDecomposition:
             Transformed data reconstructed by parameter \theta.
         """
         self.theta = self._legendre_decomposition(P)
-        Q = self._compute_Q(self.theta) * P.sum()
+        Q = self._compute_Q(self.theta, self.beta) * P.sum()
         self.reconstruction_err_ = self._calc_rmse(P, Q)
 
         return Q
@@ -134,9 +134,9 @@ class LegendreDecomposition:
         """
         self._check_is_fitted(self)
 
-        return self._compute_Q(self.theta)
+        return self._compute_Q(self.theta, self.beta)
 
-    def _compute_Q_(self, theta, b=None):
+    def _compute_Q_(self, theta, beta=None):
         r"""Compute decomposable tensor Q from parameter \theta.
 
         Parameters
@@ -145,8 +145,8 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
 
-        b : array
-            set of decomposition basis B.
+        beta : list
+            sets of decomposition basis vectors.
 
         Returns
         -------
@@ -154,25 +154,107 @@ class LegendreDecomposition:
             second/third-order tensor.
             Decomposable tensor.
         """
-        shape = theta.shape
-        order = len(shape)
-        exp_theta = np.exp(theta)
-        Q = self.prev_Q
-        if b == None:
-            b = [0 for i in range(order)]
+        idx = theta.shape
+        order = len(theta.shape)
+        theta_sum = np.zeros(theta.shape)
 
         if order == 2:
-            for i, j in itertools.product(range(b[0], shape[0]), range(b[1], shape[1])):
-                Q[i, j] = exp_theta[np.arange(0, i+1)][:, np.arange(0, j+1)].prod()
+            for i in range(idx[0]):
+                for j in range(idx[1]):
+                    for v in beta:
+                        if (v[0] <= i) and (v[1] <= j):
+                            theta_sum[i ,j] += theta[v]
         elif order == 3:
-            for i, j, k in itertools.product(range(b[0], shape[0]), range(b[1], shape[1]), range(b[2], shape[2])):
-                Q[i, j, k] = exp_theta[np.arange(0, i+1)][:, np.arange(0, j+1)][:, :, np.arange(0, k+1)].prod()
+            for i in range(idx[0]):
+                for j in range(idx[1]):
+                    for k in range(idx[2]):
+                        for v in beta:
+                            if (v[0] <= i) and (v[1] <= j) and (v[2] <= k):
+                                theta_sum[i ,j, k] += theta[v]
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
 
+        Q = np.exp(theta_sum)
         psi = Q.sum()
         Q /= psi
-        self.prev_Q = Q.copy()
+
+        return Q
+
+    def _compute_Q(self, theta, beta=None):
+        r"""Compute decomposable tensor Q from parameter \theta using Dynamic Programming.
+
+        Parameters
+        ----------
+        theta : array
+            second/third-order tensor.
+            Same shapes as input tensor P.
+
+        beta : list
+            sets of decomposition basis vectors.
+
+        Returns
+        -------
+        Q : array
+            second/third-order tensor.
+            Decomposable tensor.
+        """
+        idx = theta.shape
+        order = len(theta.shape)
+        theta_sum = np.zeros(theta.shape)
+
+        if order == 2:
+            theta_sum[0, 0] = theta[0, 0]
+
+            # update outside eta.
+            for i in range(1, idx[0]):
+                theta_sum[i, 0] = theta[i, 0] + theta_sum[i-1, 0]
+            for j in range(1, idx[1]):
+                theta_sum[0, j] = theta[0, j] + theta_sum[0, j-1]
+
+            # update internal eta.
+            for i in range(1, idx[0]):
+                for j in range(1, idx[1]):
+                    theta_sum[i, j] = theta[i, j] + theta_sum[i-1, j] \
+                                        + theta_sum[i, j-1] - theta_sum[i-1, j-1]
+
+        elif order == 3:
+            theta_sum[0, 0, 0] = theta[0, 0, 0]
+
+            # update outside eta.
+            for i in range(1, idx[0]):
+                theta_sum[i, 0, 0] = theta[i, 0, 0] + theta_sum[i-1, 0, 0]
+            for j in range(1, idx[1]):
+                theta_sum[0, j, 0] = theta[0, j, 0] + theta_sum[0, j-1, 0]
+            for k in range(1, idx[2]):
+                theta_sum[0, 0, k] = theta[0, 0, k] + theta_sum[0, 0, k-1]
+
+            # update internal eta.
+            for i in range(1, idx[0]):
+                for j in range(1, idx[1]):
+                    theta_sum[i, j, 0] = theta[i, j, 0] + theta_sum[i-1, j, 0] \
+                                            + theta_sum[i, j-1, 0] - theta_sum[i-1, j-1, 0]
+            for j in range(1, idx[1]):
+                for k in range(1, idx[2]):
+                    theta_sum[0, j, k] = theta[0, j, k] + theta_sum[0, j-1, k] \
+                                            + theta_sum[0, j, k-1] - theta_sum[0, j-1, k-1]
+            for i in range(1, idx[0]):
+                for k in range(1, idx[2]):
+                    theta_sum[i, 0, k] = theta[i, 0, k] + theta_sum[i-1, 0, k] \
+                                            + theta_sum[i, 0, k-1] - theta_sum[i-1, 0, k-1]
+
+            for i in range(1, idx[0]):
+                for j in range(1, idx[1]):
+                    for k in range(1, idx[2]):
+                        theta_sum[i, j, k] = theta[i, j, k] + theta_sum[i-1, j, k] + theta_sum[i, j-1, k] \
+                                            + theta_sum[i, j, k-1] - theta_sum[i-1, j-1, k] - theta_sum[i-1, j, k-1] \
+                                            - theta_sum[i, j-1, k-1] + theta_sum[i-1, j-1, k-1]
+
+        else:
+            raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
+
+        Q = np.exp(theta_sum)
+        psi = Q.sum()
+        Q /= psi
 
         return Q
 
@@ -235,39 +317,39 @@ class LegendreDecomposition:
 
             # update outside eta.
             for i in range(idx[0])[::-1]:
-                eta[i, idx[1]] = eta[i+1, idx[1]] + Q[i, idx[1]]
+                eta[i, idx[1]] = Q[i, idx[1]] + eta[i+1, idx[1]]
             for j in range(idx[1])[::-1]:
-                eta[idx[0], j] = eta[idx[0], j+1] + Q[idx[0], j]
+                eta[idx[0], j] = Q[idx[0], j] + eta[idx[0], j+1]
 
             # update internal eta.
             for i in range(idx[0])[::-1]:
                 for j in range(idx[1])[::-1]:
-                    eta[i, j] = eta[i+1, j] + eta[i, j+1] + Q[i, j] - eta[i+1, j+1]
+                    eta[i, j] = Q[i, j] + eta[i+1, j] + eta[i, j+1] - eta[i+1, j+1]
 
         elif order == 3:
             eta[idx[0], idx[1], idx[2]] = Q[idx[0], idx[1], idx[2]]
 
             # update outside eta.
             for i in range(idx[0])[::-1]:
-                eta[i, idx[1], idx[2]] = eta[i+1, idx[1], idx[2]] + Q[i, idx[1], idx[2]]
+                eta[i, idx[1], idx[2]] = Q[i, idx[1], idx[2]] + eta[i+1, idx[1], idx[2]]
             for j in range(idx[1])[::-1]:
-                eta[idx[0], j, idx[2]] = eta[idx[0], j+1, idx[2]] + Q[idx[0], j, idx[2]]
+                eta[idx[0], j, idx[2]] = Q[idx[0], j, idx[2]] + eta[idx[0], j+1, idx[2]]
             for k in range(idx[2])[::-1]:
-                eta[idx[0], idx[1], k] = eta[idx[0], idx[1], k+1] + Q[idx[0], idx[1], k]
+                eta[idx[0], idx[1], k] = Q[idx[0], idx[1], k] + eta[idx[0], idx[1], k+1]
 
             # update internal eta.
             for i in range(idx[0])[::-1]:
                 for j in range(idx[1])[::-1]:
-                    eta[i, j, idx[2]] = eta[i+1, j, idx[2]] + eta[i, j+1, idx[2]] \
-                                            + Q[i, j, idx[2]] - eta[i+1, j+1, idx[2]]
+                    eta[i, j, idx[2]] = Q[i, j, idx[2]] + eta[i+1, j, idx[2]] \
+                                            + eta[i, j+1, idx[2]] - eta[i+1, j+1, idx[2]]
             for j in range(idx[1])[::-1]:
                 for k in range(idx[2])[::-1]:
-                    eta[idx[0], j, k] = eta[idx[0], j+1, k] + eta[idx[0], j, k+1] \
-                                            + Q[idx[0], j, k] - eta[idx[0], j+1, k+1]
+                    eta[idx[0], j, k] = Q[idx[0], j, k] + eta[idx[0], j+1, k] \
+                                            + eta[idx[0], j, k+1] - eta[idx[0], j+1, k+1]
             for i in range(idx[0])[::-1]:
                 for k in range(idx[2])[::-1]:
-                    eta[i, idx[1], k] = eta[i+1, idx[1], k] + eta[i, idx[1], k+1] \
-                                            + Q[i, idx[1], k] - eta[i+1, idx[1], k+1]
+                    eta[i, idx[1], k] = Q[i, idx[1], k] + eta[i+1, idx[1], k]\
+                                            + eta[i, idx[1], k+1] - eta[i+1, idx[1], k+1]
 
             for i in range(idx[0])[::-1]:
                 for j in range(idx[1])[::-1]:
@@ -449,16 +531,11 @@ class LegendreDecomposition:
             second/third-order tensor.
             parameter \eta.
             Same shapes as input tensor P.
-
-        Q : array
-            second/third-order tensor.
-            Decomposable tensor.
         """
         theta = np.zeros(self.shape)
         eta = np.zeros(self.shape)
-        Q = np.zeros(self.shape)
 
-        return theta, eta, Q
+        return theta, eta
 
     def _gen_norm(self, shape):
         """Generate set of decomposition basis B
@@ -628,7 +705,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta, self.prev_eta, self.prev_Q = self._initialize()
+        theta, self.prev_eta = self._initialize()
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
         if self.verbose:
@@ -638,7 +715,7 @@ class LegendreDecomposition:
             print(self.eta_hat)
 
         for n_iter in range(self.max_iter):
-            eta = self._compute_eta(self._compute_Q(theta))
+            eta = self._compute_eta(self._compute_Q(theta, beta))
             if self.verbose:
                 print("\n\n============= iteration: {}, eta =============".format(n_iter))
                 print(eta)
@@ -656,7 +733,7 @@ class LegendreDecomposition:
 
             for v in beta:
                 # \theta_v \gets \theta_v - \epsilon \times (\eta_v - \hat{\eta_v})
-                grad = self._compute_eta(self._compute_Q(theta)) - self.eta_hat
+                grad = self._compute_eta(self._compute_Q(theta, beta)) - self.eta_hat
                 theta[v] -= self.learning_rate * grad[v]
 
             if self.verbose:
@@ -686,7 +763,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta, self.prev_eta, self.prev_Q = self._initialize()
+        theta, self.prev_eta = self._initialize()
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
         theta_vec = np.array([theta[v] for v in beta])
@@ -697,7 +774,7 @@ class LegendreDecomposition:
             print(self.eta_hat)
 
         for n_iter in range(self.max_iter):
-            eta = self._compute_eta(self._compute_Q(theta))
+            eta = self._compute_eta(self._compute_Q(theta, beta))
             if self.verbose:
                 print("\n\n============= iteration: {}, eta =============".format(n_iter))
                 print(eta)
