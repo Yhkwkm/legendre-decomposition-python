@@ -292,18 +292,17 @@ class LegendreDecomposition:
         """
         shape = Q.shape
         order = len(Q.shape)
-        eta = self.prev_eta
+        eta = np.zeros(Q.shape)
 
         if order == 2:
             for i, j in itertools.product(range(shape[0]), range(shape[1])):
                 eta[i, j] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])].sum()
         elif order == 3:
             for i, j, k in itertools.product(range(shape[0]), range(shape[1]), range(shape[2])):
-                eta[i, j, k] = Q[np.arange(i, shape[0])][:, np.arange(j, shape[1])][:, :, np.arange(k, shape[2])].sum()
+                eta[i, j, k] = Q[np.arange(i, shape[0])]\
+                                [:, np.arange(j, shape[1])][:, :, np.arange(k, shape[2])].sum()
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
-
-        self.prev_eta = eta.copy()
 
         return eta
 
@@ -326,7 +325,7 @@ class LegendreDecomposition:
         """
         idx = [i - 1 for i in Q.shape]
         order = len(Q.shape)
-        eta = self.prev_eta
+        eta = np.zeros(Q.shape)
 
         if order == 2:
             eta[idx[0], idx[1]] = Q[idx[0], idx[1]]
@@ -371,8 +370,6 @@ class LegendreDecomposition:
 
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
-
-        self.prev_eta = eta.copy()
 
         return eta
 
@@ -537,16 +534,10 @@ class LegendreDecomposition:
         theta : array
             second/third-order tensor.
             Same shapes as input tensor P.
-
-        eta : array
-            second/third-order tensor.
-            parameter \eta.
-            Same shapes as input tensor P.
         """
         theta = np.zeros(self.shape)
-        eta = np.zeros(self.shape)
 
-        return theta, eta
+        return theta
 
     def _gen_norm(self, shape):
         """Generate set of decomposition basis B
@@ -717,7 +708,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta, self.prev_eta = self._initialize()
+        theta = self._initialize()
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
         if self.verbose:
@@ -775,7 +766,7 @@ class LegendreDecomposition:
             second/third-order tensor.
             Same shapes as input tensor P.
         """
-        theta, self.prev_eta = self._initialize()
+        theta = self._initialize()
         self.eta_hat = self._compute_eta(P)
         self.res = 0.
         theta_vec = np.array([theta[v] for v in beta])
