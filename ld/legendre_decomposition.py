@@ -159,7 +159,7 @@ class LegendreDecomposition:
 
         return self._compute_Q(self.theta, self.beta)
 
-    def _compute_Q_(self, theta, beta=None):
+    def _compute_Q_(self, theta, beta):
         r"""Compute decomposable tensor Q from parameter \theta.
 
         Parameters
@@ -814,12 +814,12 @@ class LegendreDecomposition:
                 print("\n\n============= iteration: {}, G =============".format(n_iter))
                 print(G)
 
-            # TODO: check performance of different way to calculate inverse matrix.
-            # TODO: Algorithm 7, Information Geometric Approaches for Neural Network Algorithms
-            # theta_vec -= np.linalg.solve(G, eta_vec)
-            # theta_vec -= np.dot(linalg.inv(G), eta_vec)
+            # TODO: Algorithm 7, Information Geometric Approaches for
+            # Neural Network Algorithms to compute G inverse
             try:
                 theta_vec -= np.dot(np.linalg.inv(G), eta_vec)
+                # theta_vec -= np.linalg.solve(G, eta_vec)
+                # theta_vec -= np.dot(linalg.inv(G), eta_vec)
             except:
                 theta_vec -= np.dot(np.linalg.pinv(G), eta_vec)
 
