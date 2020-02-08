@@ -159,18 +159,15 @@ class LegendreDecomposition:
         theta_sum = np.zeros(theta.shape)
 
         if order == 2:
-            for i in range(idx[0]):
-                for j in range(idx[1]):
-                    for v in beta:
-                        if (v[0] <= i) and (v[1] <= j):
-                            theta_sum[i ,j] += theta[v]
+            for i, j in itertools.product(range(idx[0]), range(idx[1])):
+                for v in beta:
+                    if (v[0] <= i) and (v[1] <= j):
+                        theta_sum[i ,j] += theta[v]
         elif order == 3:
-            for i in range(idx[0]):
-                for j in range(idx[1]):
-                    for k in range(idx[2]):
-                        for v in beta:
-                            if (v[0] <= i) and (v[1] <= j) and (v[2] <= k):
-                                theta_sum[i ,j, k] += theta[v]
+            for i, j, k in itertools.product(range(idx[0]), range(idx[1]), range(idx[2])):
+                for v in beta:
+                    if (v[0] <= i) and (v[1] <= j) and (v[2] <= k):
+                        theta_sum[i ,j, k] += theta[v]
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
 
