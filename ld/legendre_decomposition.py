@@ -226,25 +226,20 @@ class LegendreDecomposition:
                 theta_sum[0, 0, k] = theta[0, 0, k] + theta_sum[0, 0, k-1]
 
             # update internal eta.
-            for i in range(1, idx[0]):
-                for j in range(1, idx[1]):
-                    theta_sum[i, j, 0] = theta[i, j, 0] + theta_sum[i-1, j, 0] \
-                                            + theta_sum[i, j-1, 0] - theta_sum[i-1, j-1, 0]
-            for j in range(1, idx[1]):
-                for k in range(1, idx[2]):
-                    theta_sum[0, j, k] = theta[0, j, k] + theta_sum[0, j-1, k] \
-                                            + theta_sum[0, j, k-1] - theta_sum[0, j-1, k-1]
-            for i in range(1, idx[0]):
-                for k in range(1, idx[2]):
-                    theta_sum[i, 0, k] = theta[i, 0, k] + theta_sum[i-1, 0, k] \
-                                            + theta_sum[i, 0, k-1] - theta_sum[i-1, 0, k-1]
+            for i, j in itertools.product(range(1, idx[0]), range(1, idx[1])):
+                theta_sum[i, j, 0] = theta[i, j, 0] + theta_sum[i-1, j, 0] \
+                                        + theta_sum[i, j-1, 0] - theta_sum[i-1, j-1, 0]
+            for j, k in itertools.product(range(1, idx[1]), range(1, idx[2])):
+                theta_sum[0, j, k] = theta[0, j, k] + theta_sum[0, j-1, k] \
+                                        + theta_sum[0, j, k-1] - theta_sum[0, j-1, k-1]
+            for i, k in itertools.product(range(1, idx[0]), range(1, idx[2])):
+                theta_sum[i, 0, k] = theta[i, 0, k] + theta_sum[i-1, 0, k] \
+                                        + theta_sum[i, 0, k-1] - theta_sum[i-1, 0, k-1]
 
-            for i in range(1, idx[0]):
-                for j in range(1, idx[1]):
-                    for k in range(1, idx[2]):
-                        theta_sum[i, j, k] = theta[i, j, k] + theta_sum[i-1, j, k] + theta_sum[i, j-1, k] \
-                                            + theta_sum[i, j, k-1] - theta_sum[i-1, j-1, k] - theta_sum[i-1, j, k-1] \
-                                            - theta_sum[i, j-1, k-1] + theta_sum[i-1, j-1, k-1]
+            for i, j, k in itertools.product(range(1, idx[0]), range(1, idx[1]), range(1, idx[2])):
+                theta_sum[i, j, k] = theta[i, j, k] + theta_sum[i-1, j, k] + theta_sum[i, j-1, k] \
+                                    + theta_sum[i, j, k-1] - theta_sum[i-1, j-1, k] - theta_sum[i-1, j, k-1] \
+                                    - theta_sum[i, j-1, k-1] + theta_sum[i-1, j-1, k-1]
 
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
@@ -335,25 +330,20 @@ class LegendreDecomposition:
                 eta[idx[0], idx[1], k] = Q[idx[0], idx[1], k] + eta[idx[0], idx[1], k+1]
 
             # update internal eta.
-            for i in range(idx[0])[::-1]:
-                for j in range(idx[1])[::-1]:
-                    eta[i, j, idx[2]] = Q[i, j, idx[2]] + eta[i+1, j, idx[2]] \
-                                            + eta[i, j+1, idx[2]] - eta[i+1, j+1, idx[2]]
-            for j in range(idx[1])[::-1]:
-                for k in range(idx[2])[::-1]:
-                    eta[idx[0], j, k] = Q[idx[0], j, k] + eta[idx[0], j+1, k] \
-                                            + eta[idx[0], j, k+1] - eta[idx[0], j+1, k+1]
-            for i in range(idx[0])[::-1]:
-                for k in range(idx[2])[::-1]:
-                    eta[i, idx[1], k] = Q[i, idx[1], k] + eta[i+1, idx[1], k]\
-                                            + eta[i, idx[1], k+1] - eta[i+1, idx[1], k+1]
+            for i, j in itertools.product(range(idx[0])[::-1], range(idx[1])[::-1]):
+                eta[i, j, idx[2]] = Q[i, j, idx[2]] + eta[i+1, j, idx[2]] \
+                                        + eta[i, j+1, idx[2]] - eta[i+1, j+1, idx[2]]
+            for j, k in itertools.product(range(idx[1])[::-1], range(idx[2])[::-1]):
+                eta[idx[0], j, k] = Q[idx[0], j, k] + eta[idx[0], j+1, k] \
+                                        + eta[idx[0], j, k+1] - eta[idx[0], j+1, k+1]
+            for i, k in itertools.product(range(idx[0])[::-1], range(idx[2])[::-1]):
+                eta[i, idx[1], k] = Q[i, idx[1], k] + eta[i+1, idx[1], k]\
+                                        + eta[i, idx[1], k+1] - eta[i+1, idx[1], k+1]
 
-            for i in range(idx[0])[::-1]:
-                for j in range(idx[1])[::-1]:
-                    for k in range(idx[2])[::-1]:
-                        eta[i, j, k] = Q[i, j, k] + eta[i+1, j, k] + eta[i, j+1, k] + eta[i, j, k+1] \
-                                        - eta[i+1, j+1, k] - eta[i+1, j, k+1] - eta[i, j+1, k+1] \
-                                        + eta[i+1, j+1, k+1]
+            for i, j, k in itertools.product(range(idx[0])[::-1], range(idx[1])[::-1], range(idx[2])[::-1]):
+                eta[i, j, k] = Q[i, j, k] + eta[i+1, j, k] + eta[i, j+1, k] + eta[i, j, k+1] \
+                                - eta[i+1, j+1, k] - eta[i+1, j, k+1] - eta[i, j+1, k+1] \
+                                + eta[i+1, j+1, k+1]
 
         else:
             raise NotImplementedError("Order of input tensor should be 2 or 3. Order: {}.".format(order))
