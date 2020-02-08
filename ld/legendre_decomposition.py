@@ -8,8 +8,7 @@ from enum import Enum
 #from sklearn.base import TransformerMixin, BaseEstimator
 
 # TODO: Support scipy sparse matrix.
-# TODO: Improve performance to use dynamic programming in compute_Q or compute_eta, using cython
-# TODO: Update docstring and comments.
+# TODO: Improve performance using cython
 # TODO: Check scope of class variables.
 
 
@@ -35,11 +34,35 @@ class LegendreDecomposition:
 
     Parameters
     ----------
-    solver : 'ng' | 'gd'
+    core_size : integer, default: 2
+        The parameter for a decomposition basis.
+
+    solver : 'ng' | 'gd', default: 'ng'
         Type of solver.
 
         - 'ng': natural gradient method.
         - 'gd': gradient descent method.
+
+    tol : float, default: 1e-4
+        Tolerance of the stopping condition.
+
+    max_iter : integer, default: 10
+        Maximum number of iterations before timing out.
+
+    learning_rate : float, default: 0.1
+        The learning rate used in gradient descent method.
+
+    random_state : int, RandomState instance, default=None
+        Used to randomize selection of a decomposition basis, when
+        ``shuffle`` is set to ``True``. Pass an int for reproducible
+        results across multiple function calls.
+        See :term:`Glossary <random_state>`.
+
+    shuffle : boolean, default: False
+        If true, randomize selection of a decomposition basis.
+
+    verbose : integer, default: 0
+        The verbosity level.
 
     Attributes
     ----------
@@ -62,8 +85,8 @@ class LegendreDecomposition:
     """
 
     def __init__(self, core_size=2, solver='ng',
-                 tol=1e-4, max_iter=5, learning_rate=0.1,
-                 random_state=42, shuffle=False, verbose=0):
+                 tol=1e-4, max_iter=10, learning_rate=0.1,
+                 random_state=None, shuffle=False, verbose=0):
         self.core_size = core_size
         self.solver = solver
         self.tol = tol
@@ -177,6 +200,7 @@ class LegendreDecomposition:
 
         return Q
 
+    # Using DP must help faster.
     def _compute_Q(self, theta, beta=None):
         r"""Compute decomposable tensor Q from parameter \theta using Dynamic Programming.
 
@@ -283,7 +307,7 @@ class LegendreDecomposition:
 
         return eta
 
-    # This method seems to be faster than self._compute_eta_
+    # Using DP must help faster.
     def _compute_eta(self, Q):
         r"""Compute parmaters \eta from decomposable tensor Q using Dynamic Programming.
 
